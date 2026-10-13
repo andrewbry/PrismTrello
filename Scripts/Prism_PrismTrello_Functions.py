@@ -38,13 +38,17 @@ try:
     import snapdraw
 except ImportError:
     snapdraw = None
-try:
-    from PySide2.QtCore import *
-    from PySide2.QtGui import *
-    from PySide2.QtWidgets import *
-except ImportError:
-    from PySide.QtCore import *
-    from PySide.QtGui import *
+# try:
+#     from PySide2.QtCore import *
+#     from PySide2.QtGui import *
+#     from PySide2.QtWidgets import *
+# except ImportError:
+#     from PySide.QtCore import *
+#     from PySide.QtGui import *
+
+from qtpy.QtCore import *
+from qtpy.QtGui import *
+from qtpy.QtWidgets import *
 
 if sys.version[0] == "3":
     pVersion = 3
@@ -66,13 +70,51 @@ Connect to Trello using trelloprism module with its handler class.
 class Prism_PrismTrello_Functions(object):
     def __init__(self, core, plugin):
         self.core = core
+        print("PrismTrello: __init__ reached")
         self.plugin = plugin
         self.trello_handler = None
+
+        callbacks = [
+        "onProjectChanged",
+        "onProjectBrowserStartup",
+        "projectSettings_loadUI",
+        "onProjectBrowserClose",
+        "onPrismSettingsOpen",
+        "onPrismSettingsSave",
+        "onStateManagerOpen",
+        "onStateManagerClose",
+        "onStateDeleted",
+        "onPublish",
+        "onSaveFile",
+        "onAssetDlgOpen",
+        "onAssetCreated",
+        "onShotCreated",
+        "preLoadEmptyScene",
+        "postLoadEmptyScene",
+        "preImport",
+        "postImport",
+        "preExport",
+        "postExport",
+        "prePlayblast",
+        "postPlayblast",
+        "preRender",
+        "postRender",
+        ]
+
+        for callback_name in callbacks:
+            self.core.registerCallback(
+                callback_name,
+                getattr(self, callback_name),
+                plugin=plugin
+            )
+
+        print("PrismTrello: callbacks registered")
 
 
     # if returns true, the plugin will be loaded by Prism
     @err_catcher(name=__name__)
     def isActive(self):
+        print("PrismTrello: isActive_reached")
         return True
 
 
@@ -80,6 +122,7 @@ class Prism_PrismTrello_Functions(object):
         """
         :return: (bool) whether or not this feature is enabled for the project
         """
+        print("PrismTrello: isEnabled_reached")
         # return eval(self.core.getConfig("trello", "enabled", configPath=self.core.prismIni) or "False")
         check = self.core.getConfig("trello", "enabled", configPath=self.core.prismIni)
         print("TRELLO INTEGRATION : {}. - Change it on Prism Project Settings.".format(check))
@@ -92,6 +135,7 @@ class Prism_PrismTrello_Functions(object):
         Refresh the handler object and ensure connection.
         :return:
         """
+        print("PrismTrello: reload_handler_reached")
         self.trello_handler = trelloprism.TrelloHandler(self.core)
         if not self.trello_handler.is_connected:
             QMessageBox(text="Trello connection rejected.\nCheck internet connection or Trello credentials.").exec_()
@@ -104,6 +148,7 @@ class Prism_PrismTrello_Functions(object):
         This class is the interface.
         :return: None
         """
+        print("PrismTrello: sync_down_reached")
         if not self.is_enabled():
             return
 
@@ -159,19 +204,41 @@ class Prism_PrismTrello_Functions(object):
     def onProjectBrowserClose(self, origin):
         pass
 
+    @err_catcher(name=__name__)
+    def projectSettings_loadUI(self, origin):
+        print("PrismTrello: project settings UI reached")
+
+        origin.w_myPlugin = QWidget()
+        origin.lo_myPlugin = QVBoxLayout(origin.w_myPlugin)
+
+        trello_widg = trelloqt.TrelloSettingsUi(self.core, origin.w_myPlugin)
+        origin.w_myPlugin.layout().insertWidget(6, trello_widg)
+        trello_widg.sync_down_button.clicked.connect(self.sync_down)
+        trello_widg.sync_up_button.clicked.connect(self.sync_up)
+
+        origin.addTab(origin.w_myPlugin, "Trello")
+
+
+
+        # page = origin.w_prjSettings
+        # trello_widg = trelloqt.TrelloSettingsUi(self.core, page)
+        # page.layout().insertWidget(6, trello_widg)
+        # trello_widg.sync_down_button.clicked.connect(self.sync_down)
+        # trello_widg.sync_up_button.clicked.connect(self.sync_up)
 
     @err_catcher(name=__name__)
     def onPrismSettingsOpen(self, origin):
-        """
-        Add a groupbox for Trello integration to the project page of settings
-        :param origin: the settings ui object
-        :return: None
-        """
-        page = origin.w_prjSettings
-        trello_widg = trelloqt.TrelloSettingsUi(self.core, page)
-        page.layout().insertWidget(6, trello_widg)
-        trello_widg.sync_down_button.clicked.connect(self.sync_down)
-        trello_widg.sync_up_button.clicked.connect(self.sync_up)
+        pass
+    #     """
+    #     Add a groupbox for Trello integration to the project page of settings
+    #     :param origin: the settings ui object
+    #     :return: None
+    #     """
+    #     page = origin.w_prjSettings
+    #     trello_widg = trelloqt.TrelloSettingsUi(self.core, page)
+    #     page.layout().insertWidget(6, trello_widg)
+    #     trello_widg.sync_down_button.clicked.connect(self.sync_down)
+    #     trello_widg.sync_up_button.clicked.connect(self.sync_up)
 
 
     @err_catcher(name=__name__)

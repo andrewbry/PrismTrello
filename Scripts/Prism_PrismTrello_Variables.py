@@ -34,7 +34,7 @@
 
 class Prism_PrismTrello_Variables(object):
 	def __init__(self, core, plugin):
-		self.version = "v1.1.1.0"
+		self.version = "v2.0.0.0"
 		self.pluginName = "PrismTrello"
 		self.pluginType = "Custom"
 		self.platforms = ["Windows", "Linux", "Darwin"]
